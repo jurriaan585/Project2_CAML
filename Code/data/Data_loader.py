@@ -30,6 +30,24 @@ class GravitationalWave_datastrain(Dataset):
             backgrounds[i, :, :] = np.load(self.path+ '/Background/Whitened/background_wf'+str(background_number)+'.npy').T
         return backgrounds
     
+    def make_dataset(self, size):
+        random_draw = np.random.randint(0,10000, size)
+        shuffle_array = np.arange(size*2)
+        np.random.shuffle(shuffle_array)
+
+        self.background = True
+        backgrounds = np.array(self[list(random_draw)])
+        self.background = False
+        injections = np.array(self[list(random_draw)])
+
+        truth_values = np.concatenate([np.zeros(size),np.ones(size)])[shuffle_array]
+        Truth_values = torch.tensor(truth_values)
+
+        dataset = np.concatenate([injections,backgrounds],1)
+        dataset = dataset[:, shuffle_array,:]
+        Dataset = torch.tensor(dataset)
+        return Dataset, Truth_values
+
     def __len__(self):
         return self.length         #the total number of injections I can find, is hardcoded for now    
     def __getitem__(self, index):

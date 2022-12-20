@@ -10,14 +10,14 @@ class CNN(nn.Module):
         self.num_channels = num_channels
 
         output_dim = num_kernels * num_channels
-        self.conv1 = nn.Conv1d(num_channels, output_dim, kernel_size=(kernel_dim,), bias=False, groups=3)
-
-        self.linear1 = nn.Linear(output_dim, 256)
+        self.conv1 = nn.Conv1d(num_channels, output_dim, kernel_size=(kernel_dim,), bias=False, groups=num_channels)
+        
+        self.linear1 = nn.Linear(65436, 256)
         self.linear2 = nn.Linear(256, 32)
-        self.linear3 = nn.Linear(32,1)
+        self.linear3 = nn.Linear(32,2)
 
     def add(self, layer):
-        return layer.sum(0)
+        return layer.sum(1).type(torch.float32)
 
     def set_kernel(self,kernels):
         with torch.no_grad():
@@ -29,12 +29,19 @@ class CNN(nn.Module):
             self.conv1.weight = torch.nn.Parameter(kernels)
 
     def forward(self, x):
+        #print('0:',x.shape)
         with torch.no_grad():
             x = self.conv1(x)
+            #print('1:', x.shape)
         x = self.add(x)
+        #print('2:', x.shape)
         x = F.relu(self.linear1(x))
-        x = F.relu(self.linear2(x))
-        x = self.linear3(x)
+        #print('3:', x.shape)
+        x = F.gelu(self.linear2(x))
+        #print('4:', x.shape)
+        x = torch.heaviside(self.linear3(x))
+        #print(x)
+        #print('5:', x.shape)
         return x
 
 

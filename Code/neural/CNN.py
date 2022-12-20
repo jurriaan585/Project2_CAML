@@ -39,7 +39,7 @@ class CNN(nn.Module):
         #print('3:', x.shape)
         x = F.gelu(self.linear2(x))
         #print('4:', x.shape)
-        x = torch.heaviside(self.linear3(x))
+        x = F.normalize(self.linear3(x))
         #print(x)
         #print('5:', x.shape)
         return x

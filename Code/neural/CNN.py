@@ -10,7 +10,7 @@ class CNN(nn.Module):
         self.num_channels = num_channels
 
         output_dim = num_kernels * num_channels
-        self.conv1 = nn.Conv1d(num_channels, output_dim, kernel_size=(kernel_dim,), bias=False, groups=num_channels)
+        self.conv1 = nn.Conv1d(num_channels, output_dim, kernel_size=(kernel_dim,), bias=False, groups=num_channels,dilation=100)
         
         self.linear1 = nn.Linear(65436, 256)
         self.linear2 = nn.Linear(256, 32)

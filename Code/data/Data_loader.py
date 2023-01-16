@@ -9,7 +9,7 @@ class GravitationalWave_datastrain(Dataset):
         self.args = args     #dummy for later use
         self.background = background
         
-        self.length = 15000
+        self.length = 10000
         self.array_length = 65536
         
     def get_injection(self,injection_number):
@@ -40,7 +40,7 @@ class GravitationalWave_datastrain(Dataset):
         self.background = False
         injections = np.array(self[list(random_draw)])
 
-        truth_values = np.concatenate([np.zeros(size),np.ones(size)])[shuffle_array]
+        truth_values = np.concatenate([np.zeros(size),np.ones(size)])[shuffle_array] #old true values
         Truth_values = torch.tensor(truth_values)
 
         dataset = np.concatenate([injections,backgrounds],1)
@@ -77,7 +77,16 @@ class GravitationalWave_datastrain(Dataset):
             
         return E1, E2, E3, time_array
 
-    
+class Data_set_transform(Dataset):
+    def __init__(self,dataset):
+        data , labels = dataset
+        self.data = data
+        self.labels = labels
+    def __len__(self):
+        return len(self.data[0])
+    def __getitem__(self,i):
+        return self.data[0:3,i], self.labels[i]
+
     
 class GravitationalWave_datastrain_New(Dataset):
     def __init__(self, path: str, background = False, noise_realization = 'Whitened', args=None ):
@@ -116,7 +125,8 @@ class GravitationalWave_datastrain_New(Dataset):
         self.background = False
         injections = np.array(self[list(random_draw)])
 
-        truth_values = np.concatenate([np.zeros(size),np.ones(size)])[shuffle_array]
+        #truth_values = np.concatenate([np.zeros(size),np.ones(size)])[shuffle_array] #old true values
+        truth_values = np.concatenate([np.repeat([[0,1]],size,axis=0),np.repeat([[1,0]],size,axis=0)])[shuffle_array]
         Truth_values = torch.tensor(truth_values)
 
         dataset = np.concatenate([injections,backgrounds],1)

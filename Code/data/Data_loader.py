@@ -83,15 +83,15 @@ class Data_set_transform(Dataset):
         self.data = data
         self.labels = labels
     def __len__(self):
-        return len(self.data[0])
+        return len(self.data)
     def __getitem__(self,i):
-        return self.data[0:3,i], self.labels[i]
+        return self.data[i,0:3], self.labels[i]
 
     
 class GravitationalWave_datastrain_New(Dataset):
-    def __init__(self, path: str, background = False, noise_realization = 'Whitened', args=None ):
+    def __init__(self, path: str, background = False, noise_realization = 'Whitened', args={} ):
         self.path = path     #path to the data folder
-        self.args = args     #dummy for later use
+        self.args = args     #dummy dict to store testing information
         self.background = background
         self.length = 15000
         self.array_length = 65536
@@ -117,20 +117,21 @@ class GravitationalWave_datastrain_New(Dataset):
     
     def make_dataset(self, size, data_bounds = [0,15000]):
         random_draw = np.random.randint(data_bounds[0],data_bounds[1], size)
+        self.args['random_draw']=random_draw
         shuffle_array = np.arange(size*2)
+        self.args['shuffle_array']=shuffle_array
+        
         np.random.shuffle(shuffle_array)
 
-        self.background = True
-        backgrounds = np.array(self[list(random_draw)])
-        self.background = False
-        injections = np.array(self[list(random_draw)])
-
+        backgrounds = self.get_backgrounds(random_draw)
+        injections = self.get_injections(random_draw)
+        
         #truth_values = np.concatenate([np.zeros(size),np.ones(size)])[shuffle_array] #old true values
-        truth_values = np.concatenate([np.repeat([[0,1]],size,axis=0),np.repeat([[1,0]],size,axis=0)])[shuffle_array]
+        truth_values = np.concatenate((np.repeat([[0,1]],size,axis=0),np.repeat([[1,0]],size,axis=0)))[shuffle_array]
         Truth_values = torch.tensor(truth_values)
 
-        dataset = np.concatenate([injections,backgrounds],1)
-        dataset = dataset[:, shuffle_array,:]
+        dataset = np.concatenate((injections,backgrounds),0)
+        dataset = dataset[shuffle_array]
         Dataset = torch.tensor(dataset)
         return Dataset, Truth_values
 

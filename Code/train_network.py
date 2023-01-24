@@ -12,7 +12,7 @@ from pathlib import Path
 from data.Data_loader import GravitationalWave_datastrain as GW_DS, GravitationalWave_datastrain_New as GW_DS_NEW
 from data.Data_loader import Data_set_transform 
 
-from neural.Network import Net as Net
+from neural.Network import *
 
 #-# Make arguments parser
 parser = argparse.ArgumentParser("parameters for Neural network, Cosmic strings gravitational waves")
@@ -27,12 +27,12 @@ parser.add_argument("--valsize", type=int, default=int(512))
 parser.add_argument("--testsize", type=int, default=int(512))
 
 parser.add_argument("--num_epochs", type=int, default=int(10))
-parser.add_argument("--batch_size", type=int, default=int(16))
+parser.add_argument("--batch_size", type=int, default=int(32))
 parser.add_argument("--num_workers", type=int, default=2)
 #parser.add_argument("--optimizer", type=str, default="AdamW", choices=["SGD", "Adam", "AdamW"])
 parser.add_argument("--learning_rate", type=float, default=1e-3)
-parser.add_argument("--momentum", type=float, default=0.1)
-parser.add_argument("--weight_decay", type=float, default=0.1)
+parser.add_argument("--momentum", type=float, default=0.001)
+parser.add_argument("--weight_decay", type=float, default=0)
 parser.add_argument("--device", type=str, default="cuda:0", choices=["cuda:0", "cpu:0"])
 
 
@@ -77,15 +77,32 @@ if __name__ == '__main__':
         for waveform_indx, flip_waveform in enumerate(f'{kernel_indx:0{len(kernels[0])}b}'):
             kernels[kernel_indx][waveform_indx] = (-1)**int(flip_waveform) * normalized_waveform
     kernels = torch.tensor(kernels).type(torch.float32) 
+    #print(kernels.size())
     
     #model
-    model = Net()
-    model.set_kernels(kernels)
-    
+    #model = WaveNetModel(layers=5,
+    #                        blocks=3,
+    #                        dilation_channels=32,
+    #                        residual_channels=32,
+    #                        skip_channels=128,
+    #                        end_channels=128, 
+    #                        output_length=2,
+    #                        classes=3,
+    #                        dtype=torch.cuda.FloatTensor, 
+    #                        bias=True)
+
+    model = Net4(data.array_length,len(normalized_waveform))#Net3(data.array_length,len(normalized_waveform))#Net2()
+    kernel = kernels[0].squeeze(0).unsqueeze(1)
+    #print(kernel.size())
+    model.set_kernel(kernel)#model.set_kernels(kernels)
+    model = model.to(device)
 
     #Optimizer
-    criterion = nn.MSELoss()#CrossEntropyLoss()#
-    optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=args.momentum)
+    criterion = nn.CrossEntropyLoss()#nn.MSELoss()#
+    optimizer = optim.Adamax(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)#momentum=args.momentum)#, 
+    for name, param in model.named_parameters():
+         if name in ['conv0.weight', 'conv0.bias']:
+                 param.requiresGrad = False
 
     
     #-# Loop over epochs
@@ -121,14 +138,16 @@ if __name__ == '__main__':
             # Transfer to GPU
             local_batch, local_labels = local
             local_batch, local_labels = local_batch.to(device), local_labels.to(device)
-
-            # Model computations
-            outputs = model(local_batch.unsqueeze(1).type(torch.float32))
-        
+            
             #loss in batch
             # zero the parameter gradients
             optimizer.zero_grad()
-            train_loss = criterion(outputs, local_labels.type(torch.float32))
+            
+            # Model computations
+            #outputs = model(local_batch.unsqueeze(1).type(torch.float32))
+            outputs = model(local_batch.type(torch.float32))
+        
+            train_loss = criterion(outputs.squeeze(1), local_labels.type(torch.float32))
             train_loss.backward()
             print(f'epoch:{epoch} training batch:{batch} loss:{train_loss:.2f}')
             running_train_loss += train_loss.item()
@@ -142,7 +161,7 @@ if __name__ == '__main__':
         # Validation
         running_val_loss = 0
         with torch.set_grad_enabled(False):
-            for index, local in enumerate(valloader):
+            for batch, local in enumerate(valloader):
                 
                 print(f'epoch:{epoch} validation batch:{batch} starting')
                 # Transfer to GPU
@@ -150,16 +169,17 @@ if __name__ == '__main__':
                 local_batch, local_labels = local_batch.to(device), local_labels.to(device)
                 
                 # Model computations
-                outputs = model(local_batch.unsqueeze(1).type(torch.float32))
+                #outputs = model(local_batch.unsqueeze(1).type(torch.float32))
+                outputs = model(local_batch.type(torch.float32))
                 
                 #loss in batch
-                val_loss = criterion(outputs, local_labels.type(torch.float32))
-                print(f'epoch:{epoch} training batch:{batch} loss:{val_loss:.2f}')
+                val_loss = criterion(outputs.squeeze(1), local_labels.type(torch.float32))
+                print(f'epoch:{epoch} validation batch:{batch} loss:{val_loss:.2f}')
                 running_val_loss += val_loss.item()
                                 
             #avarage loss
             avarage_val_loss = running_val_loss / (2*args.valsize/args.batch_size)
-            print(f'epoch:{epoch + 1}, validation loss: {avarage_val_loss:.3f}')
+            print(f'epoch:{epoch}, validation loss: {avarage_val_loss:.3f}')
 
 
         # Save model

@@ -31,7 +31,7 @@ parser.add_argument("--num_workers", type=int, default=2)
 #parser.add_argument("--optimizer", type=str, default="AdamW", choices=["SGD", "Adam", "AdamW"])
 parser.add_argument("--learning_rate", type=float, default=1e-3)
 parser.add_argument("--momentum", type=float, default=0.1)
-parser.add_argument("--weight_decay", type=float, default=0.1)
+parser.add_argument("--weight_decay", type=float, default=0)
 parser.add_argument("--device", type=str, default="cuda:0", choices=["cuda:0", "cpu:0"])
 
 
@@ -72,14 +72,14 @@ if __name__ == '__main__':
     kernels = torch.tensor(kernels).type(torch.float32)  
     
     #model
-    model = Net4()#Net3(data.array_length,len(normalized_waveform))#Net2()
-    kernel = kernels[0].squeeze(0).unsqueeze(1)
+    model = Net5()#Net3(data.array_length,len(normalized_waveform))#Net2()
+    #kernel = kernels[0].squeeze(0).unsqueeze(1)
     #print(kernel.size())
     #model.set_kernel(kernel)#model.set_kernels(kernels)
     model = model.to(device)
     
     #Optimizer
-    criterion = nn.MSELoss()#nn.CrossEntropyLoss()#
+    criterion = nn.CrossEntropyLoss()#nn.MSELoss()#
     #optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=args.momentum)
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)#, momentum=args.momentu
     

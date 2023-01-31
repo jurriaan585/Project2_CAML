@@ -126,7 +126,6 @@ class GravitationalWave_datastrain_New(Dataset):
         backgrounds = self.get_backgrounds(random_draw)
         injections = self.get_injections(random_draw)
         
-        #truth_values = np.concatenate([np.zeros(size),np.ones(size)])[shuffle_array] #old true values
         truth_values = np.concatenate((np.repeat([[0,1]],size,axis=0),np.repeat([[1,0]],size,axis=0)))[shuffle_array]
         Truth_values = torch.tensor(truth_values)
 

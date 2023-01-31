@@ -31,7 +31,7 @@ parser.add_argument("--batch_size", type=int, default=int(32))
 parser.add_argument("--num_workers", type=int, default=2)
 #parser.add_argument("--optimizer", type=str, default="AdamW", choices=["SGD", "Adam", "AdamW"])
 parser.add_argument("--learning_rate", type=float, default=1e-3)
-parser.add_argument("--momentum", type=float, default=0.001)
+parser.add_argument("--momentum", type=float, default=0.5)
 parser.add_argument("--weight_decay", type=float, default=0)
 parser.add_argument("--device", type=str, default="cuda:0", choices=["cuda:0", "cpu:0"])
 
@@ -91,18 +91,19 @@ if __name__ == '__main__':
     #                        dtype=torch.cuda.FloatTensor, 
     #                        bias=True)
 
-    model = Net4(data.array_length,len(normalized_waveform))#Net3(data.array_length,len(normalized_waveform))#Net2()
-    kernel = kernels[0].squeeze(0).unsqueeze(1)
+    model = Net5()
+    #model = Net4(data.array_length,len(normalized_waveform))#Net3(data.array_length,len(normalized_waveform))#Net2()
+    #kernel = kernels[0].squeeze(0).unsqueeze(1)
     #print(kernel.size())
-    model.set_kernel(kernel)#model.set_kernels(kernels)
+    #model.set_kernel(kernel)#model.set_kernels(kernels)
     model = model.to(device)
 
     #Optimizer
     criterion = nn.CrossEntropyLoss()#nn.MSELoss()#
-    optimizer = optim.Adamax(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)#momentum=args.momentum)#, 
-    for name, param in model.named_parameters():
-         if name in ['conv0.weight', 'conv0.bias']:
-                 param.requiresGrad = False
+    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate,weight_decay=args.weight_decay)# , momentum=args.momentum)#
+    #for name, param in model.named_parameters():
+    #     if name in ['conv0.weight', 'conv0.bias']:
+    #             param.requiresGrad = False
 
     
     #-# Loop over epochs
@@ -147,7 +148,7 @@ if __name__ == '__main__':
             #outputs = model(local_batch.unsqueeze(1).type(torch.float32))
             outputs = model(local_batch.type(torch.float32))
         
-            train_loss = criterion(outputs.squeeze(1), local_labels.type(torch.float32))
+            train_loss = criterion(outputs, local_labels.type(torch.float32))
             train_loss.backward()
             print(f'epoch:{epoch} training batch:{batch} loss:{train_loss:.2f}')
             running_train_loss += train_loss.item()
@@ -173,7 +174,7 @@ if __name__ == '__main__':
                 outputs = model(local_batch.type(torch.float32))
                 
                 #loss in batch
-                val_loss = criterion(outputs.squeeze(1), local_labels.type(torch.float32))
+                val_loss = criterion(outputs, local_labels.type(torch.float32))
                 print(f'epoch:{epoch} validation batch:{batch} loss:{val_loss:.2f}')
                 running_val_loss += val_loss.item()
                                 
@@ -184,5 +185,7 @@ if __name__ == '__main__':
 
         # Save model
         torch.save(obj={'epoch': epoch,'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
+                        'optimizer_state_dict': optimizer.state_dict(),
+                       'avarage_train_loss':avarage_train_loss,'avarage_val_loss':avarage_val_loss,
+                       'args':args},
                        f=f'{output_path}/checkpoint_epoch_{epoch}_loss_{running_val_loss:.3f}.pth')

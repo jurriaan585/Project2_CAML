@@ -126,13 +126,15 @@ class Net4(nn.Module):
         self.conv4 = nn.Conv1d(128, 64, kernel_size = 3)
         self.conv5 = nn.Conv1d(64, 1, kernel_size = 16)
         
+        self.dropout = nn.Dropout(0.5)
+        
         self.batchnorm1 = nn.BatchNorm1d(64)
         self.batchnorm2 = nn.BatchNorm1d(128)
         
         self.maxpool = nn.MaxPool1d(3)
-        self.maxpool2 = nn.MaxPool1d(16)
+        self.maxpool2 = nn.MaxPool1d(2)
         
-        self.linear1 = nn.Linear(340, 256)
+        self.linear1 = nn.Linear(2722, 256)
         self.linear2 = nn.Linear(256, 32)
         self.linear3 = nn.Linear(32,2)
 
@@ -144,13 +146,13 @@ class Net4(nn.Module):
         
         #print('0:',x.shape)
         x = self.conv1(x)
-        x = self.batchnorm1(x)
+        #x = self.batchnorm1(x)
         x = F.relu(x)
         #print('1:', x.shape)
         
         
         x = self.conv2(x)
-        x = self.batchnorm1(x)
+        #x = self.batchnorm1(x)
         x = F.relu(x)
         x = self.maxpool(x)
         #print('2:', x.shape)
@@ -161,7 +163,7 @@ class Net4(nn.Module):
         x = F.relu(x)
         
         x = self.conv4(x)
-        x = self.batchnorm1(x)
+        #x = self.batchnorm1(x)
         x = F.relu(x)
         x = self.maxpool(x)
         #print('3:', x.shape)
@@ -172,9 +174,91 @@ class Net4(nn.Module):
         #print('4:', x.shape)
         
         x = F.relu(self.linear1(x))
+        x = self.dropout(x)
         #print('5:', x.shape)
         x = F.relu(self.linear2(x))
         #print('6:', x.shape)
         x = F.normalize(self.linear3(x))
         #print('7:', x.shape)
+        return x.squeeze(1)
+    
+
+class Block(nn.Module):
+    def __init__(self, in_channels, out_channels, padding=2, dilation=1, stride=1):
+        super().__init__()
+
+        self.basic_block = nn.Sequential(
+            nn.Conv1d(in_channels, out_channels, 5, padding=padding, dilation=dilation, stride=stride),
+            nn.ReLU()
+        )
+
+    def forward(self, x):
+        return self.basic_block(x)
+
+
+class Classifier(nn.Module):
+    def __init__(self,in_chanels=3):
+        super().__init__()
+        self.convBlock = nn.Sequential(
+            Block(in_chanels, 8),
+            nn.MaxPool1d(kernel_size=2),
+            Block(8, 16),
+            nn.MaxPool1d(kernel_size=2),
+            Block(16, 32),
+            nn.MaxPool1d(kernel_size=2),
+            Block(32, 64),
+            nn.MaxPool1d(kernel_size=2),
+            Block(64, 64),
+            nn.MaxPool1d(kernel_size=2),
+            Block(64, 128),
+            nn.MaxPool1d(kernel_size=2),
+            Block(128, 256),
+            nn.MaxPool1d(kernel_size=2),
+            Block(256, 512)
+        )
+        self.classification = nn.Sequential(
+            nn.Dropout(p=0.5),
+            nn.Linear(512, 2)
+        )
+
+    def forward(self, x):
+        x = self.convBlock(x)
+        x, _ = torch.max(x, dim=2)
+        x = self.classification(x)
         return x
+    
+
+class Net5(nn.Module):
+    def __init__(self,in_chanels=3):
+        super().__init__()
+        self.convBlock = nn.Sequential(
+            Block(in_chanels, 8),
+            nn.MaxPool1d(kernel_size=2),
+            Block(8, 16),
+            nn.MaxPool1d(kernel_size=2),
+            Block(16, 32),
+            nn.MaxPool1d(kernel_size=2),
+            Block(32, 64),
+            nn.MaxPool1d(kernel_size=2),
+            Block(64, 64),
+            nn.MaxPool1d(kernel_size=2),
+            Block(64, 128),
+            nn.MaxPool1d(kernel_size=2),
+            Block(128, 256),
+            nn.MaxPool1d(kernel_size=2),
+            Block(256, 512)
+        )
+        self.classification = nn.Sequential(
+            nn.Dropout(p=0.5),
+            nn.Linear(512, 2)
+        )
+
+    def forward(self, x):
+        x = self.convBlock(x)
+        #print('1:',x.size())
+        x, _ = torch.max(x, dim=2)
+        #print('2:',x.size())
+        x = self.classification(x)
+        #print('3:',x.size())
+        return x
+    

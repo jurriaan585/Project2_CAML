@@ -1,5 +1,7 @@
 # Neural network directory, CNN architecture
 
+_Used Network architextures are found in neural.py. The final network we used in the research is Net5()_
+
 The CNN structure is visualized in the following figure: 
 
 

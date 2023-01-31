@@ -1,4 +1,4 @@
-#Data loader
+# Data loader
 
 In this work, we use a generated data-set, which resembles how observations of cosmic strings would appear in three different gravitational wave detectors. 
 An observation event is a one-dimensional time series of 8 seconds at a sampling frequency of 8096 Hz, which makes an array of 65536 values. 
